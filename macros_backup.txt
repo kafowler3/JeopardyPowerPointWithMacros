@@ -1,0 +1,148 @@
+Sub LoadJeopardyFromCSV()
+    Dim csvFileName As String
+    Dim csvFilePath As String
+    Dim fileNum As Integer
+    Dim lineData As String
+    Dim rowArray() As String
+    Dim csvData(1 To 11, 1 To 6) As String
+    Dim r As Long, c As Long
+    Dim targetIndex As Integer
+    Dim sectionIndex As Integer
+    Dim targetSlide As Slide
+    Dim targetShape As Shape
+    Dim textBoxFound As Boolean
+    
+    csvFileName = "questions.csv"
+    
+    ' Set the path to your CSV file
+    csvFilePath = ActivePresentation.Path & "\" & csvFileName
+    
+    ' Check if file exists
+    If Dir(csvFilePath) = "" Then
+        MsgBox "CSV file not found at: " & csvFilePath, vbCritical, "File Error"
+        Exit Sub
+    End If
+    
+    ' Read CSV into memory matrix
+    fileNum = FreeFile
+    Open csvFilePath For Input As #fileNum
+    
+    r = 1
+    Do Until EOF(fileNum) Or r > 11
+        Line Input #fileNum, lineData
+        If Trim(lineData) <> "" Then
+            rowArray = Split(lineData, ",")
+            For c = 0 To UBound(rowArray)
+                If c < 6 Then
+                    ' Trim quotes or extra spaces if present
+                    csvData(r, c + 1) = Replace(Trim(rowArray(c)), """", "")
+                End If
+            Next c
+            r = r + 1
+        End If
+    Loop
+    Close #fileNum
+    
+    For r = 1 To 11 ' Rows 1 to 11
+        For c = 1 To 6 ' Columns 1 to 6
+            If r = 1 Then ' Categories
+                targetSlideIndex = c + 1
+            Else
+                sectionIndex = 1 + (c - 1) * 5 + r
+                
+                If r < 7 Then ' Clue
+                    targetSlideIndex = ActivePresentation.SectionProperties.FirstSlide(sectionIndex) + 1
+                    
+                Else ' Answer
+                    sectionIndex = sectionIndex - 5
+                    targetSlideIndex = ActivePresentation.SectionProperties.FirstSlide(sectionIndex) + 2
+                End If
+            End If
+            
+            Set targetSlide = ActivePresentation.Slides(targetSlideIndex)
+            
+            ' Find the first text box on the slide
+            For Each targetShape In targetSlide.Shapes
+                If targetShape.HasTextFrame Then
+                    If targetShape.TextFrame.HasText Or True Then
+                        targetShape.TextFrame.TextRange.Text = csvData(r, c)
+                        textBoxFound = True
+                        Exit For ' Update the first text box found and move on
+                    End If
+                End If
+            Next targetShape
+        Next c
+    Next r
+    
+    MsgBox "Successfully populated slides", vbInformation, "Done"
+End Sub
+
+Sub OnSlideShowPageChange(ByVal SSW As SlideShowWindow)
+    'MsgBox "Starting SlideChange"
+    
+    Dim thisSlide As Slide
+    
+    Set thisSlide = SSW.View.Slide
+    
+    ' First 2 sections not valid for HideSquare. Trigger HideSquare on 4th slide
+    ' If correct section
+    If thisSlide.sectionIndex > 2 Then
+        Dim nSectionSlide As Long
+        nSectionSlide = thisSlide.SlideIndex - ActivePresentation.SectionProperties.FirstSlide(thisSlide.sectionIndex) + 1
+        
+        ' If correct slide in section
+        If nSectionSlide = 4 Then
+            'MsgBox "Triggering HideSquares"
+            HideSquare
+        End If
+    ' Trigger ResetSquares after first slide
+    ElseIf thisSlide.SlideIndex = 2 Then
+        'MsgBox "Triggering ResetSquares"
+        ResetSquares
+    End If
+    
+    'MsgBox "SlideChange Completed"
+End Sub
+
+Sub ResetSquares()
+    'MsgBox "Starting ResetSquares"
+    
+    Dim homeSlide As Slide
+    Prefix = "Tile"
+    
+    Set homeSlide = ActivePresentation.Slides(10)
+    
+    For Each shp In homeSlide.Shapes
+        If Left(shp.Name, Len(Prefix)) = Prefix Then
+            shp.Visible = msoFalse
+        End If
+    Next shp
+    
+    'MsgBox "ResetSquares Completed"
+End Sub
+
+Sub HideSquare()
+    'MsgBox "Starting HideSquare"
+
+    Dim homeSlide As Slide
+    Dim thisSlide As Slide
+    Dim zoomTile As Shape
+    Dim sectionName As String
+    Dim tileName As String
+    
+    Set homeSlide = ActivePresentation.Slides(10)
+    Set thisSlide = ActivePresentation.SlideShowWindow.View.Slide
+    sectionName = ActivePresentation.SectionProperties.Name(thisSlide.sectionIndex)
+    tileName = "Tile " & sectionName
+    
+    ' Locate the Section Zoom shape on Home Slide
+    On Error Resume Next
+    Set zoomTile = homeSlide.Shapes(tileName)
+    On Error GoTo 0
+    
+    If Not zoomTile Is Nothing Then
+        homeSlide.Shapes(tileName).Visible = msoTrue
+    End If
+    
+    'MsgBox "HideSquare Completed"
+End Sub
