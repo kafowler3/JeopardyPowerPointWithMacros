@@ -4,7 +4,7 @@ This is a PowerPoint template and all associated files to run custom Jeopardy! s
 
 - First, install the two font files, ITC Korina Bold and Swiss 911.
 - Next, open JeopardyTemplate.pptm in PowerPoint (you may wish to save the PowerPoint as a new file to preserve the template).
-- If you encounter issues with the macros not being found or not allowed to run on your system, copy and paste them from macros.txt into your PowerPoint VBA editor.
+- If you encounter issues with the macros not being found or not allowed to run on your system, copy and paste them from macros_backup.txt into your PowerPoint VBA editor.
 - Next, write your clues and answers in questions.csv.
 - Each column of the CSV corresponds to one of the six categories.
 - The first row of the CSV is the category names. 
